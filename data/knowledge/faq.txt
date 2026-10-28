@@ -1,0 +1,40 @@
+SmallBiz Online Shop — Frequently Asked Questions (FAQ)
+
+Q: How can I track my order?
+A: You can track your order by messaging us with your order ID (e.g. ORD-1234) and we will check the latest status for you. You can also use the tracking link sent to your email when your order was dispatched.
+
+Q: How long does delivery take?
+A: Standard delivery takes 3–5 business days. Express delivery (next business day) is available for orders placed before 2pm. Delivery times may vary during peak periods such as holidays.
+
+Q: Do you deliver internationally?
+A: Currently we deliver within the United Kingdom only. We are working to expand delivery to the EU in early 2027. Please check our website for the latest delivery zone updates.
+
+Q: What payment methods do you accept?
+A: We accept Visa, Mastercard, American Express, PayPal, Apple Pay, and Google Pay. All payments are processed securely. We do not store your card details.
+
+Q: Is my payment information secure?
+A: Yes. All payments are processed through PCI-DSS compliant payment partners. We never store your full card number on our servers.
+
+Q: What should I do if I received a damaged or wrong item?
+A: We are sorry to hear that. Please contact our support team within 14 days of delivery. We will arrange a free return and send a replacement or issue a full refund. Please do not discard the item until we confirm the return process.
+
+Q: Can I change or cancel my order?
+A: You can change or cancel your order within 2 hours of placing it, provided it has not yet been dispatched. Please contact us as soon as possible. Once an order is dispatched we cannot cancel it, but you can return it under our returns policy.
+
+Q: Do you offer gift wrapping?
+A: Yes, gift wrapping is available for an additional £2.99 per item. You can add this option at checkout. You can also include a personalised message at no extra charge.
+
+Q: How do I contact customer support?
+A: You can reach us via WhatsApp or SMS at the number you are messaging now. Our human support team is available Monday to Friday, 9am to 6pm UK time. Messages outside these hours will be answered on the next business day.
+
+Q: Do you have a physical store?
+A: We are an online-only retailer. However, you are welcome to collect your order from our warehouse in London by appointment. Please contact us to arrange a collection slot.
+
+Q: How do I leave a product review?
+A: After your order is delivered you will receive an email with a link to leave a review on our website. We read every review and appreciate your feedback.
+
+Q: What is the warranty on your products?
+A: All products sold by SmallBiz carry a minimum 12-month manufacturer's warranty. Some products include an extended 24-month warranty — this is noted on the product page. Warranty covers manufacturing defects but not accidental damage.
+
+Q: Can I get a VAT invoice?
+A: Yes. VAT invoices are automatically generated for all orders and sent to your registered email address. If you need a duplicate invoice, please contact our support team with your order ID.

@@ -1,33 +1,34 @@
-const LambdaService = require('../services/LambdaService.mjs');
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
 
-exports.handler = async (event, context, callback) => {
+import * as LambdaService from '../services/LambdaService.mjs';
 
+export const handler = async (event, _context, callback) => {
     try {
-        console.info('App Version: ', process.env.APPLICATION_VERSION)
-        console.trace('Event: ', JSON.stringify(event,null,2));
+        console.info('App Version: ', process.env.APPLICATION_VERSION);
+        console.trace('Event: ', JSON.stringify(event, null, 2));
 
         for (const record of event.Records) {
+            console.trace('Record: ', JSON.stringify(record, null, 2));
 
-            console.trace('Record: ', JSON.stringify(record,null,2));
+            const inboundMessage = JSON.parse(record.Sns.Message);
+            inboundMessage.action = 'process';
+            inboundMessage.replyExpected = true;
+            inboundMessage.channel = 'sms';
+            inboundMessage.destinationAddress = inboundMessage.originationNumber;
 
-            let inboundMessage = JSON.parse(record.Sns.Message)
-            inboundMessage.action = 'process'
-            inboundMessage.replyExpected = true
-            inboundMessage.channel = 'sms'
-            inboundMessage.destinationAddress = inboundMessage.originationNumber
+            console.trace('Inbound Message: ', JSON.stringify(inboundMessage, null, 2));
 
-            console.trace('Inbound Message: ', JSON.stringify(inboundMessage,null,2));
-            
-            //Execute the Chat Orchestrator Lambda
-            const response = await LambdaService.invoke(process.env.CHAT_ORCHESTRATOR_LAMBDA_NAME, { inboundMessage: inboundMessage })
-            console.trace('Response: ', JSON.stringify(response,null,2))
-
+            // Execute the Chat Orchestrator Lambda
+            const response = await LambdaService.invoke(process.env.CHAT_ORCHESTRATOR_LAMBDA_NAME, { inboundMessage });
+            console.trace('Response: ', JSON.stringify(response, null, 2));
         }
 
-        callback(null, 'Success')
+        callback(null, 'Success');
+    } catch (error) {
+        console.error('smsTrigger error:', error);
+        callback(error);
     }
-    catch (error) {
-        console.error(error);
-        callback(error)
-    }
-}
+};
+
+export default { handler };

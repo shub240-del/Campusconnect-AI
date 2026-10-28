@@ -22,6 +22,7 @@ import path = require('path');
 import { CfnGuardrail } from "aws-cdk-lib/aws-bedrock";
 
 import { APIStack } from './api-stack';
+import { DashboardApiStack } from './dashboard-api-stack';
 
 const configParams = require('../config.params.json');
 
@@ -87,8 +88,8 @@ export class CdkBackendStack extends Stack {
           type: 'MISCONDUCT'
         },
         {
-          inputStrength: 'NONE',
-          outputStrength: 'NONE',
+          inputStrength: 'HIGH',
+          outputStrength: 'HIGH',
           type: 'PROMPT_ATTACK'
         }],
       },
@@ -139,6 +140,32 @@ export class CdkBackendStack extends Stack {
       pointInTimeRecovery: true,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
       removalPolicy: RemovalPolicy.RETAIN 
+    });
+
+    // InteractionLog Table — Permanent audit trail of all customer interactions
+    const interactionLogTable = new dynamodb.Table(this, 'InteractionLog', {
+      partitionKey: { name: 'interactionId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: RemovalPolicy.RETAIN
+    });
+
+    // BusinessOrders Table — Structured mock or production order database
+    const businessOrdersTable = new dynamodb.Table(this, 'BusinessOrders', {
+      partitionKey: { name: 'orderId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: RemovalPolicy.RETAIN
+    });
+
+    // RateLimit Table — Token-bucket rate limiting table
+    const rateLimitTable = new dynamodb.Table(this, 'RateLimitTable', {
+      partitionKey: { name: 'customerId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'windowStart', type: dynamodb.AttributeType.NUMBER },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'ttl',
+      removalPolicy: RemovalPolicy.DESTROY
     });
 
     //Custom Resource Lambda
@@ -192,7 +219,7 @@ export class CdkBackendStack extends Stack {
             "social-messaging:ListLinkedWhatsAppBusinessAccounts",
           ],
           resources: [
-              `arn:aws:social-messaging:*:${this.account}:waba/*}`
+              `arn:aws:social-messaging:*:${this.account}:waba/*`
           ]
         }), new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
@@ -247,7 +274,10 @@ export class CdkBackendStack extends Stack {
         "ACCOUNT_ID": `${this.account}`,
         "ORGANIZATION_ID": '', //Update this if you need more granularity in your Firehose Stream for things like brands or other organizational units
         "CONVERSATION_FIREHOSE_STREAM": ssmParams.conversationFirehoseStream == 'not-defined' ? undefined : ssmParams.conversationFirehoseStream,
-        "CHANNEL_FINDER_LAMBDA_NAME": channelFinderLambda.functionName
+        "CHANNEL_FINDER_LAMBDA_NAME": channelFinderLambda.functionName,
+        "INTERACTION_LOG_TABLE": interactionLogTable.tableName,
+        "RATE_LIMIT_TABLE": rateLimitTable.tableName,
+        "BUSINESS_ORDERS_TABLE": businessOrdersTable.tableName
       },  
       initialPolicy: [
         new iam.PolicyStatement({
@@ -268,6 +298,7 @@ export class CdkBackendStack extends Stack {
                 "dynamodb:Query",
                 "dynamodb:Scan",
                 "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
                 "dynamodb:BatchWriteItem",
                 "dynamodb:DeleteItem"
             ],
@@ -275,7 +306,11 @@ export class CdkBackendStack extends Stack {
               contextTable.tableArn, 
               `${contextTable.tableArn}/*`,
               useCaseTable.tableArn,
-              `${useCaseTable.tableArn}/*`
+              `${useCaseTable.tableArn}/*`,
+              interactionLogTable.tableArn,
+              `${interactionLogTable.tableArn}/*`,
+              rateLimitTable.tableArn,
+              `${rateLimitTable.tableArn}/*`
             ]
         }),
         new iam.PolicyStatement({
@@ -310,6 +345,9 @@ export class CdkBackendStack extends Stack {
     )
 
     let targetChannels = [];
+    let smsProcessorLambda: nodeLambda.NodejsFunction | undefined;
+    let whatsappProcessorLambda: nodeLambda.NodejsFunction | undefined;
+    let emailProcessorLambda: nodeLambda.NodejsFunction | undefined;
     
     //SMS Configuration
     if (ssmParams.smsEnabled) {
@@ -367,7 +405,7 @@ export class CdkBackendStack extends Stack {
       chatTopic.addSubscription(new subscriptions.LambdaSubscription(smsTriggerLambda));
 
       //SMS Processor Lambda
-      const smsProcessorLambda = new nodeLambda.NodejsFunction(this, 'smsProcessorLambda', {
+      smsProcessorLambda = new nodeLambda.NodejsFunction(this, 'smsProcessorLambda', {
         runtime: Runtime.NODEJS_22_X,
         entry: path.join(__dirname, 'lambdas/handlers/node/outbound-processors/smsProcessor.mjs'),
         timeout: Duration.seconds(30),
@@ -627,7 +665,7 @@ export class CdkBackendStack extends Stack {
       whatsappTopic.addSubscription(new subscriptions.LambdaSubscription(whatsappTriggerLambda))
 
       //WhatsApp Processor Lambda
-      const whatsappProcessorLambda = new nodeLambda.NodejsFunction(this, 'whatsappProcessorLambda', {
+      whatsappProcessorLambda = new nodeLambda.NodejsFunction(this, 'whatsappProcessorLambda', {
         runtime: Runtime.NODEJS_22_X,
         entry: path.join(__dirname, 'lambdas/handlers/node/outbound-processors/whatsappProcessor.mjs'),
         timeout: Duration.seconds(30),
@@ -671,7 +709,7 @@ export class CdkBackendStack extends Stack {
 
     //Email Configuration
     if (ssmParams.emailEnabled) {
-      const emailProcessorLambda = new nodeLambda.NodejsFunction(this, 'emailProcessorLambda', {
+      emailProcessorLambda = new nodeLambda.NodejsFunction(this, 'emailProcessorLambda', {
         runtime: Runtime.NODEJS_22_X,
         entry: path.join(__dirname, 'lambdas/handlers/node/outbound-processors/emailProcessor.mjs'),
         timeout: Duration.seconds(30),
@@ -1085,6 +1123,107 @@ $query$`,
       });
     } 
 
+    // =========================================================================
+    // SmallBiz Support Use Case — Core AI Customer Support & Escalation Hub
+    // =========================================================================
+
+    // Escalation Notifier Lambda
+    const escalationNotifierLambda = new nodeLambda.NodejsFunction(this, 'EscalationNotifierLambda', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, 'lambdas/handlers/node/outbound-processors/escalationNotifier.mjs'),
+      timeout: Duration.seconds(30),
+      memorySize: 512,
+      logFormat: 'JSON',
+      applicationLogLevel: 'INFO',
+      environment: {
+        "APPLICATION_VERSION": `v${this.node.tryGetContext('application_version')} (${new Date().toISOString()})`,
+        "INTERACTION_LOG_TABLE": interactionLogTable.tableName,
+        "OPERATOR_EMAIL_ADDRESS": ssmParams.operatorEmailAddress || '',
+        "SES_FROM_ADDRESS": ssmParams.sesFromAddress || '',
+      },
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['ses:SendEmail'],
+          resources: ['*']
+        })
+      ]
+    });
+    interactionLogTable.grantReadWriteData(escalationNotifierLambda);
+
+    // Support Response Generator Lambda (Bedrock KB + Confidence Gate + Order Tool)
+    const supportResponseGeneratorLambda = new nodeLambda.NodejsFunction(this, 'SupportResponseGeneratorLambda', {
+      runtime: Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, 'lambdas/handlers/node/response-generators/supportResponseGenerator.mjs'),
+      timeout: Duration.seconds(60),
+      memorySize: 512,
+      logFormat: 'JSON',
+      applicationLogLevel: 'INFO',
+      environment: {
+        "APPLICATION_VERSION": `v${this.node.tryGetContext('application_version')} (${new Date().toISOString()})`,
+        "KNOWLEDGE_BASE_ID": ssmParams.bedrockKnowledgeBaseId || '',
+        "ORDERS_DYNAMODB_TABLE": businessOrdersTable.tableName,
+        "ESCALATION_NOTIFIER_LAMBDA_NAME": escalationNotifierLambda.functionName
+      },
+      initialPolicy: [
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "bedrock:RetrieveAndGenerate",
+            "bedrock:Retrieve",
+            "bedrock:InvokeModel"
+          ],
+          resources: ['*']
+        }),
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: ['bedrock:ApplyGuardrail'],
+          resources: [guardrail.attrGuardrailArn]
+        })
+      ]
+    });
+    businessOrdersTable.grantReadData(supportResponseGeneratorLambda);
+    escalationNotifierLambda.grantInvoke(supportResponseGeneratorLambda);
+
+    chatOrchestratorLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['lambda:InvokeFunction'],
+        resources: [
+          `arn:aws:lambda:${this.region}:${this.account}:function:${supportResponseGeneratorLambda.functionName}`,
+          `arn:aws:lambda:${this.region}:${this.account}:function:${escalationNotifierLambda.functionName}`
+        ]
+      })
+    );
+
+    // Put Support Use Case Data in DynamoDB
+    const supportUseCaseData = {
+      useCase: 'support',
+      responseGeneratorLambdaName: supportResponseGeneratorLambda.functionName,
+      channels: targetChannels,
+      initialMessage: 'SmallBiz Support: Hello! How can I help you with your order, returns, or questions today?'
+    };
+    new CustomResource(this, `${configParams.CdkAppName}-PutSupportConfig`, {
+      resourceType: 'Custom::PutDynamoDBData',
+      serviceToken: configLambda.functionArn,
+      serviceTimeout: Duration.seconds(30),
+      properties: {
+        UseCaseTableName: useCaseTable.tableName,
+        Data: JSON.stringify(supportUseCaseData),
+        Random: Date.now().toString()
+      }
+    });
+
+    // Deploy Operator Dashboard Stack (HTTP API + S3 static SPA)
+    const dashboardStack = new DashboardApiStack(this, 'DashboardApiStack', {
+      interactionLogTable,
+      businessOrdersTable,
+      whatsappProcessorLambda,
+      smsProcessorLambda,
+      emailProcessorLambda,
+      apiAllowedOrigins: ssmParams.apiAllowedOrigins
+    });
+
     /**************************************************************************************************************
       * CDK Outputs *
     **************************************************************************************************************/
@@ -1111,6 +1250,26 @@ $query$`,
 
     new CfnOutput(this, "UseCaseTable", {
       value: useCaseTable.tableName
+    });
+
+    new CfnOutput(this, "InteractionLogTable", {
+      value: interactionLogTable.tableName
+    });
+
+    new CfnOutput(this, "BusinessOrdersTable", {
+      value: businessOrdersTable.tableName
+    });
+
+    new CfnOutput(this, "SupportResponseGeneratorLambdaName", {
+      value: supportResponseGeneratorLambda.functionName
+    });
+
+    new CfnOutput(this, "DashboardApiEndpoint", {
+      value: dashboardStack.httpApi.apiEndpoint
+    });
+
+    new CfnOutput(this, "DashboardWebsiteUrl", {
+      value: dashboardStack.dashboardBucket.bucketWebsiteUrl
     });
 
   }

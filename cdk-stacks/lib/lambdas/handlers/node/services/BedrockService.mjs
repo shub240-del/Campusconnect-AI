@@ -7,7 +7,7 @@ const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
 import { BedrockAgentRuntimeClient, InvokeAgentCommand, RetrieveAndGenerateCommand } from "@aws-sdk/client-bedrock-agent-runtime";
 const agentRuntime = new BedrockAgentRuntimeClient({ region: process.env.AWS_REGION });
 
-const { BedrockAgentClient, StartIngestionJobCommand } = require("@aws-sdk/client-bedrock-agent"); 
+import { BedrockAgentClient, StartIngestionJobCommand } from "@aws-sdk/client-bedrock-agent";
 const agent = new BedrockAgentClient({ region: process.env.AWS_REGION });
 
 export async function invokeModel (promptEnvelope, useCase) {
@@ -104,8 +104,12 @@ export async function invokeAgent (prompt, useCase, sessionId, sessionState=unde
 
   } catch (error) {
     console.error('InvokeAgent error: ', error);
-    if (error.name == "ThrottlingException"){
-      return {output:{text:'Request Rate exceeded, please wait a minute and try again'}}
+    if (error.name === 'ThrottlingException') {
+      // PATCH: throw a named error so generators can catch and return user-friendly message
+      // without crashing on undefined property access
+      const throttleErr = new Error('Bedrock agent request rate exceeded. Please try again in a moment.');
+      throttleErr.name = 'ThrottlingException';
+      throw throttleErr;
     } else {
       throw new Error(error.message);
     }
@@ -167,8 +171,11 @@ export async function retrieveAndGenerate (prompt, useCase, sessionId=undefined)
     return response
   } catch (error) {
       console.error('Bedrock.retrieveAndGenerate: ', error);
-      if (error.name == "ThrottlingException"){
-        return {output:{text:'Request Rate exceeded, please wait a minute and try again'}}
+      if (error.name === 'ThrottlingException') {
+        // PATCH: throw a named error so generators can catch and return user-friendly message
+        const throttleErr = new Error('Knowledge base request rate exceeded. Please try again in a moment.');
+        throttleErr.name = 'ThrottlingException';
+        throw throttleErr;
       } else {
         throw new Error(error.message);
       }
@@ -194,3 +201,11 @@ export async function startIngestionJob (context) {
       throw new Error(error.message);
   }
 }
+
+export default {
+  invokeModel,
+  converse,
+  invokeAgent,
+  retrieveAndGenerate,
+  startIngestionJob
+};

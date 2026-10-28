@@ -1,23 +1,29 @@
-const WhatsAppService = require('../services/WhatsAppService.mjs');
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
 
-exports.handler = async (event, context, callback) => {
+import * as WhatsAppService from '../services/WhatsAppService.mjs';
+
+export const handler = async (event, _context, callback) => {
     try {
-        console.info("App Version:", process.env.APPLICATION_VERSION)
-        console.trace(`Event: `, JSON.stringify(event,null,2));
+        console.info("App Version:", process.env.APPLICATION_VERSION);
+        console.trace(`Event: `, JSON.stringify(event, null, 2));
 
-        let recipient = event.recipient
-        let whatsAppResponse = null
-        switch(recipient.action){
+        const recipient = event.recipient;
+        let whatsAppResponse = null;
+
+        switch (recipient.action) {
             case 'forward':
-                if(event.imageId){
+                if (event.imageId) {
                     whatsAppResponse = await WhatsAppService.sendWhatsAppImage(recipient.destinationAddress, event.imageId, event.outboundMessage);
                 } else {
                     whatsAppResponse = await WhatsAppService.sendWhatsAppMessage(recipient.destinationAddress, event.outboundMessage);
                 }
                 break;
             case 'process':
-                await WhatsAppService.markMessageAsRead(recipient.inboundMessageId)
-                if(event.imageId){
+                if (recipient.inboundMessageId) {
+                    await WhatsAppService.markMessageAsRead(recipient.inboundMessageId);
+                }
+                if (event.imageId) {
                     whatsAppResponse = await WhatsAppService.sendWhatsAppImage(recipient.destinationAddress, event.imageId, event.outboundMessage);
                 } else {
                     whatsAppResponse = await WhatsAppService.sendWhatsAppMessage(recipient.destinationAddress, event.outboundMessage);
@@ -25,15 +31,16 @@ exports.handler = async (event, context, callback) => {
                 break;
             case 'template':
                 whatsAppResponse = await WhatsAppService.sendWhatsAppTemplateMessage(recipient.destinationAddress, event.outboundMessage);
-                console.trace('whatsAppResponse: ', whatsAppResponse)
+                console.trace('whatsAppResponse: ', whatsAppResponse);
                 break;
             default:
                 break;
-        }  
-        callback(null, {messageId: whatsAppResponse?.messageId})
+        }
+        callback(null, { messageId: whatsAppResponse?.messageId });
+    } catch (error) {
+        console.error('whatsappProcessor error:', error);
+        callback(error);
     }
-    catch (error) {
-        console.error(error);
-        callback(error)
-    }
-}
+};
+
+export default { handler };

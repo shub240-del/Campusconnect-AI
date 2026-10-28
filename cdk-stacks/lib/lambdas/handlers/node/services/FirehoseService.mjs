@@ -1,5 +1,5 @@
-const { FirehoseClient, PutRecordCommand } = require("@aws-sdk/client-firehose");
-const firehoseClient = new FirehoseClient({}); 
+import { FirehoseClient, PutRecordCommand } from "@aws-sdk/client-firehose";
+const firehoseClient = new FirehoseClient({});
 
 export async function firehoseDirectPut(streamName, data) {
   const record = {
@@ -8,10 +8,7 @@ export async function firehoseDirectPut(streamName, data) {
   };
 
   try {
-    // Create the command
     const command = new PutRecordCommand(record);
-
-    // Send the command
     const response = await firehoseClient.send(command);
     return response;
   } catch (error) {
@@ -19,3 +16,5 @@ export async function firehoseDirectPut(streamName, data) {
     throw error;
   }
 }
+
+export default { firehoseDirectPut };

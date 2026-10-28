@@ -1,21 +1,28 @@
-import { configure, sendSuccess, sendFailure, sendResponse, LOG_VERBOSE, SUCCESS } from 'cfn-custom-resource';
-import { PinpointSMSVoiceV2Client, UpdatePhoneNumberCommand, UpdateRcsAgentCommand } from "@aws-sdk/client-pinpoint-sms-voice-v2"; // ES Modules import
-import {SocialMessagingClient, PutWhatsAppBusinessAccountEventDestinationsCommand, ListLinkedWhatsAppBusinessAccountsCommand} from "@aws-sdk/client-socialmessaging";
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
+//
+// PATCH v4.0.0 — SmallBiz AI Support Hub
+//   • Replaced illegal require() calls with top-level ESM imports (Node 22 ESM)
+//   • catch block now signals sendFailure to CloudFormation instead of fake sendSuccess
+//   • Preserves all original Custom Resource handlers unchanged
 
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocument } = require("@aws-sdk/lib-dynamodb");
+import { configure, sendSuccess, sendFailure, sendResponse, LOG_VERBOSE, SUCCESS } from 'cfn-custom-resource';
+import { PinpointSMSVoiceV2Client, UpdatePhoneNumberCommand, UpdateRcsAgentCommand } from "@aws-sdk/client-pinpoint-sms-voice-v2";
+import { SocialMessagingClient, PutWhatsAppBusinessAccountEventDestinationsCommand, ListLinkedWhatsAppBusinessAccountsCommand } from "@aws-sdk/client-socialmessaging";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocument } from "@aws-sdk/lib-dynamodb";
+import crypto from 'crypto';
+
 const dynamoDBClient = new DynamoDBClient({ region: process.env.AWS_REGION });
 const ddbDocClient = DynamoDBDocument.from(dynamoDBClient);
 
-import crypto from 'crypto';
 const pinpointClient = new PinpointSMSVoiceV2Client({});
 const socialMessagingClient = new SocialMessagingClient({});
 
 /****************
  * Helper Functions
-****************/
+ ****************/
 const setWhatsAppEventDestination = async (wabAccountId, snsTopicArn, roleArn) => {
-  // Prepare the command input
   const input = {
     id: wabAccountId,
     eventDestinations: [
@@ -27,11 +34,9 @@ const setWhatsAppEventDestination = async (wabAccountId, snsTopicArn, roleArn) =
 
   console.trace(input)
 
-  // Create the command
   const command = new PutWhatsAppBusinessAccountEventDestinationsCommand(input);
 
   try {
-    // Send the command
     const response = await socialMessagingClient.send(command);
     console.log("Event destination set successfully:", response);
     return response;
@@ -53,7 +58,7 @@ const whatsAppEventDestinationExists = async (wabaId) => {
     for (const waba of response.linkedAccounts) {
       if (waba.id === wabaId) {
         if (waba.eventDestinations.length > 0) {
-          return waba.eventDestinations[0].eventDestinationArn; //Currently only one event destination is supported
+          return waba.eventDestinations[0].eventDestinationArn;
         } else {
           return false;
         }
@@ -119,13 +124,13 @@ const putDynamoDBItem = async (tableName, item) => {
     return results
   } catch (error) {
     console.error(error);
-    return false
+    throw error  // Propagate so CloudFormation receives FAILED, not fake SUCCESS
   }
 }
 
 /****************
  * Main
-****************/
+ ****************/
 export const handler = async (event, context, callback) => {
     console.log('Received event:', JSON.stringify(event, null, 2));
 
@@ -136,20 +141,19 @@ export const handler = async (event, context, callback) => {
     if (requestType === 'Create') {
         physicalId = `vce.eum-config.${crypto.randomUUID()}`
     } else if(!physicalId) {
-        sendResponse(event, context.logStreamName, 'FAILED', `invalid request: request type is '${requestType}' but 'PhysicalResourceId' is not defined`)
+        // PATCH: signal genuine failure to CloudFormation
+        await sendFailure(physicalId || 'unknown', {}, event, `invalid request: request type is '${requestType}' but 'PhysicalResourceId' is not defined`)
+        return
     }
 
     try{
       switch (event.ResourceType){
         case 'Custom::EUMConfig':
           if (requestType === 'Create' || requestType === 'Update'){
-            //Create or Update Stuff
             await updatePhoneNumber(props);
-
             const result = await sendSuccess(physicalId, { }, event);
             return result
           } else if(requestType === 'Delete'){
-            //Delete Stuff
             const result = await sendSuccess(physicalId, { }, event);
             return result
           } else {
@@ -159,13 +163,10 @@ export const handler = async (event, context, callback) => {
 
         case 'Custom::RCSConfig':
           if (requestType === 'Create' || requestType === 'Update'){
-            //Configure two-way messaging on the RCS Agent
             await updateRcsAgent(props);
-
             const result = await sendSuccess(physicalId, { }, event);
             return result
           } else if(requestType === 'Delete'){
-            //Delete Stuff
             const result = await sendSuccess(physicalId, { }, event);
             return result
           } else {
@@ -176,7 +177,7 @@ export const handler = async (event, context, callback) => {
         case 'Custom::SetWhatsAppEventDestination':
           if (requestType === 'Create' || requestType === 'Update'){
             let eventDestinationExists = await whatsAppEventDestinationExists(props.WhatsAppBusinessAccountId)
-            if (!eventDestinationExists) { //If the WhatsApp Business Account does not have an event destination, create one
+            if (!eventDestinationExists) {
               await setWhatsAppEventDestination(props.WhatsAppBusinessAccountId, props.SNSTopicARN, props.SNSRoleARN)
             }
             const result = await sendSuccess(physicalId, { }, event);
@@ -188,6 +189,7 @@ export const handler = async (event, context, callback) => {
 
         case 'Custom::PutDynamoDBData':
           if (requestType === 'Create' || requestType === 'Update'){
+            // PATCH: putDynamoDBItem now throws on failure — error bubbles to catch below
             await putDynamoDBItem(props.UseCaseTableName, JSON.parse(props.Data))
             const result = await sendSuccess(physicalId, { }, event);
             return result
@@ -202,9 +204,10 @@ export const handler = async (event, context, callback) => {
       }
     }
     catch (ex){
-      console.log(ex);
-      const result = await sendSuccess(physicalId, { }, event);
+      // PATCH: propagate real failures to CloudFormation so stacks don't silently succeed
+      // with an empty DynamoDB configuration table
+      console.error('CustomResource handler error:', ex);
+      const result = await sendFailure(physicalId, { }, event, ex.message || 'Custom resource handler failed');
       return result
     }
 };
-

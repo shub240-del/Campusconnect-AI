@@ -1,0 +1,72 @@
+[
+  {
+    "orderId": "ORD-7781",
+    "customerId": "demo_customer_1",
+    "status": "Shipped",
+    "productName": "Wireless Noise-Cancelling Headphones (Black)",
+    "eta": "Nov 3, 2026",
+    "trackingUrl": "https://tracking.example.com/ORD-7781",
+    "createdAt": 1761628800000,
+    "updatedAt": 1761974400000
+  },
+  {
+    "orderId": "ORD-9910",
+    "customerId": "demo_customer_2",
+    "status": "Delivered",
+    "productName": "Smart Home Hub v3",
+    "eta": "Delivered Oct 25, 2026",
+    "trackingUrl": "https://tracking.example.com/ORD-9910",
+    "createdAt": 1761283200000,
+    "updatedAt": 1761801600000
+  },
+  {
+    "orderId": "ORD-4421",
+    "customerId": "demo_customer_3",
+    "status": "Processing",
+    "productName": "USB-C Charging Station (6-port)",
+    "eta": "Nov 7, 2026",
+    "trackingUrl": null,
+    "createdAt": 1762060800000,
+    "updatedAt": 1762060800000
+  },
+  {
+    "orderId": "ORD-3302",
+    "customerId": "demo_customer_4",
+    "status": "Cancelled",
+    "productName": "Mechanical Keyboard (TKL, Blue Switches)",
+    "eta": null,
+    "trackingUrl": null,
+    "createdAt": 1761024000000,
+    "updatedAt": 1761110400000
+  },
+  {
+    "orderId": "ORD-5519",
+    "customerId": "demo_customer_5",
+    "status": "Refund Pending",
+    "productName": "Portable Bluetooth Speaker",
+    "eta": "Refund processing 5-7 business days",
+    "trackingUrl": null,
+    "createdAt": 1760764800000,
+    "updatedAt": 1761369600000
+  },
+  {
+    "orderId": "ORD-8844",
+    "customerId": "demo_customer_1",
+    "status": "Shipped",
+    "productName": "Laptop Stand (Aluminium, Adjustable)",
+    "eta": "Nov 2, 2026",
+    "trackingUrl": "https://tracking.example.com/ORD-8844",
+    "createdAt": 1761888000000,
+    "updatedAt": 1761974400000
+  },
+  {
+    "orderId": "ORD-1010",
+    "customerId": "demo_customer_6",
+    "status": "Processing",
+    "productName": "4K Webcam with Ring Light",
+    "eta": "Nov 5, 2026",
+    "trackingUrl": null,
+    "createdAt": 1762147200000,
+    "updatedAt": 1762147200000
+  }
+]

@@ -158,6 +158,27 @@
 			"description": "The name of the Firehose Stream to use for storing conversation history.",
 			"defaultValue": "not-defined",
 			"required": false
+		},
+		{
+			"name": "operatorEmailAddress",
+			"cliFormat": "operator-email-address",
+			"description": "Email address to receive escalation alerts for human intervention.",
+			"defaultValue": "",
+			"required": false
+		},
+		{
+			"name": "sesFromAddress",
+			"cliFormat": "ses-from-address",
+			"description": "Verified SES email address for outbound customer and operator emails.",
+			"defaultValue": "",
+			"required": false
+		},
+		{
+			"name": "rateLimitPerWindow",
+			"cliFormat": "rate-limit-per-window",
+			"description": "Maximum number of messages accepted per customer in a 10-minute window.",
+			"defaultValue": "10",
+			"required": false
 		}
 	],
 	"tags": {

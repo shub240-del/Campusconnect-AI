@@ -23,3 +23,8 @@ export function formatAmazonConversation (conversation) {
     }
     return formattedConversation;
 }
+
+export default {
+    formatAnthropicConversation,
+    formatAmazonConversation
+};

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SmallBiz AI Support Hub — Operator Dashboard for managing customer support interactions" />
+  <title>SmallBiz Support Hub — Operator Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">SB</div>
+          <div>
+            <div class="logo-title">SmallBiz</div>
+            <div class="logo-subtitle">Support Hub</div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" id="nav-all" onclick="filterTickets('all')">
+          <span class="nav-icon">📋</span>
+          <span>All Tickets</span>
+          <span class="nav-badge" id="badge-all">0</span>
+        </button>
+        <button class="nav-item" id="nav-escalated" onclick="filterTickets('ESCALATED')">
+          <span class="nav-icon">🔴</span>
+          <span>Escalated</span>
+          <span class="nav-badge danger" id="badge-escalated">0</span>
+        </button>
+        <button class="nav-item" id="nav-pending" onclick="filterTickets('PENDING')">
+          <span class="nav-icon">🟡</span>
+          <span>Pending</span>
+          <span class="nav-badge warning" id="badge-pending">0</span>
+        </button>
+        <button class="nav-item" id="nav-resolved" onclick="filterTickets('RESOLVED')">
+          <span class="nav-icon">🟢</span>
+          <span>Resolved</span>
+          <span class="nav-badge success" id="badge-resolved">0</span>
+        </button>
+        <button class="nav-item" id="nav-replied" onclick="filterTickets('REPLIED')">
+          <span class="nav-icon">💬</span>
+          <span>Replied</span>
+          <span class="nav-badge" id="badge-replied">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="operator-info">
+          <div class="operator-avatar">OP</div>
+          <div>
+            <div class="operator-name">Operator</div>
+            <div class="operator-status">● Online</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+      <!-- Top bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 class="page-title">Support Interactions</h1>
+          <div class="refresh-info" id="refresh-info">Last updated: —</div>
+        </div>
+        <div class="topbar-right">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" placeholder="Search by ID or status..." oninput="searchTickets(this.value)" />
+          </div>
+          <button class="btn btn-primary" onclick="loadTickets()" id="refresh-btn">
+            <span>↻</span> Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- Stats Bar -->
+      <div class="stats-bar" id="stats-bar">
+        <div class="stat-card" onclick="filterTickets('ESCALATED')">
+          <div class="stat-value danger" id="stat-escalated">0</div>
+          <div class="stat-label">Escalated</div>
+        </div>
+        <div class="stat-card" onclick="filterTickets('PENDING')">
+          <div class="stat-value warning" id="stat-pending">0</div>
+          <div class="stat-label">Pending</div>
+        </div>
+        <div class="stat-card" onclick="filterTickets('RESOLVED')">
+          <div class="stat-value success" id="stat-resolved">0</div>
+          <div class="stat-label">Resolved</div>
+        </div>
+        <div class="stat-card" onclick="filterTickets('REPLIED')">
+          <div class="stat-value info" id="stat-replied">0</div>
+          <div class="stat-label">Replied</div>
+        </div>
+        <div class="stat-card" onclick="filterTickets('all')">
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Today</div>
+        </div>
+      </div>
+
+      <!-- Ticket List + Detail Split View -->
+      <div class="content-area">
+        <!-- Ticket List -->
+        <section class="ticket-list-panel" id="ticket-list-panel">
+          <div class="panel-header">
+            <span id="filter-label">All Tickets</span>
+            <span class="ticket-count" id="ticket-count">0 tickets</span>
+          </div>
+          <div id="ticket-list" class="ticket-list">
+            <div class="empty-state" id="empty-state">
+              <div class="empty-icon">📭</div>
+              <div class="empty-title">No interactions yet</div>
+              <div class="empty-sub">Customer messages will appear here in real time.</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Ticket Detail -->
+        <section class="ticket-detail-panel" id="ticket-detail-panel">
+          <div class="detail-placeholder" id="detail-placeholder">
+            <div class="placeholder-icon">💬</div>
+            <div class="placeholder-title">Select a ticket to view details</div>
+            <div class="placeholder-sub">Click any interaction on the left to open it here.</div>
+          </div>
+          <div class="ticket-detail-content" id="ticket-detail-content" style="display:none">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Reply Modal -->
+  <div class="modal-overlay" id="reply-modal" style="display:none" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Reply to Customer</h2>
+        <button class="modal-close" onclick="closeReplyModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea id="reply-text" class="form-textarea" rows="5" placeholder="Type your reply here..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Channel</label>
+          <select id="reply-channel" class="form-select">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="sms">SMS</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeReplyModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="sendReply()" id="send-reply-btn">Send Reply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

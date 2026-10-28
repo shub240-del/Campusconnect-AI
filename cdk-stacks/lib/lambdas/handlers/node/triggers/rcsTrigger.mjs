@@ -1,21 +1,19 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
 
-const LambdaService = require('../services/LambdaService.mjs');
+import * as LambdaService from '../services/LambdaService.mjs';
 
-exports.handler = async (event, context, callback) => {
-
+export const handler = async (event, _context, callback) => {
     try {
-        console.info('App Version: ', process.env.APPLICATION_VERSION)
-        console.trace('Event: ', JSON.stringify(event,null,2));
+        console.info('App Version: ', process.env.APPLICATION_VERSION);
+        console.trace('Event: ', JSON.stringify(event, null, 2));
 
         for (const record of event.Records) {
+            console.trace('Record: ', JSON.stringify(record, null, 2));
 
-            console.trace('Record: ', JSON.stringify(record,null,2));
+            const snsMessage = JSON.parse(record.Sns.Message);
 
-            // The RCS inbound payload uses the same format as SMS two-way messaging:
-            // { originationNumber, destinationNumber, messageKeyword, messageBody, inboundMessageId, previousPublishedMessageId }
-            let snsMessage = JSON.parse(record.Sns.Message)
-
-            let inboundMessage = {
+            const inboundMessage = {
                 originationNumber: snsMessage.originationNumber,
                 destinationNumber: snsMessage.destinationNumber,
                 messageKeyword: snsMessage.messageKeyword,
@@ -27,20 +25,20 @@ exports.handler = async (event, context, callback) => {
                 channel: 'rcs',
                 destinationAddress: snsMessage.originationNumber,
                 serviceAddress: snsMessage.destinationNumber
-            }
+            };
 
-            console.trace('Inbound Message: ', JSON.stringify(inboundMessage,null,2));
+            console.trace('Inbound Message: ', JSON.stringify(inboundMessage, null, 2));
 
-            //Execute the Chat Orchestrator Lambda
-            const response = await LambdaService.invoke(process.env.CHAT_ORCHESTRATOR_LAMBDA_NAME, { inboundMessage: inboundMessage })
-            console.trace('Response: ', JSON.stringify(response,null,2))
-
+            // Execute the Chat Orchestrator Lambda
+            const response = await LambdaService.invoke(process.env.CHAT_ORCHESTRATOR_LAMBDA_NAME, { inboundMessage });
+            console.trace('Response: ', JSON.stringify(response, null, 2));
         }
 
-        callback(null, 'Success')
+        callback(null, 'Success');
+    } catch (error) {
+        console.error('rcsTrigger error:', error);
+        callback(error);
     }
-    catch (error) {
-        console.error(error);
-        callback(error)
-    }
-}
+};
+
+export default { handler };

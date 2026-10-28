@@ -1,20 +1,23 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: MIT-0
 
-const PinpointService = require('../services/PinpointService.mjs');
+import * as PinpointService from '../services/PinpointService.mjs';
 
-exports.handler = async (event, context, callback) => {
+export const handler = async (event, _context, callback) => {
     try {
-        console.info("App Version:", process.env.APPLICATION_VERSION)
-        console.trace(`Event: `, JSON.stringify(event,null,2));
+        console.info("App Version:", process.env.APPLICATION_VERSION);
+        console.trace(`Event: `, JSON.stringify(event, null, 2));
 
-        let recipient = event.recipient
+        const recipient = event.recipient;
 
         // Phase 1: plain text RCS only. Rich content (cards, carousels,
         // suggestions) will be added in Phase 2 via SendRcsMessage.
-        let pinpointResponse = await PinpointService.sendRCS(recipient.destinationAddress, event.outboundMessage);
-        callback(null, {messageId: pinpointResponse?.MessageId})
+        const pinpointResponse = await PinpointService.sendRCS(recipient.destinationAddress, event.outboundMessage);
+        callback(null, { messageId: pinpointResponse?.MessageId });
+    } catch (error) {
+        console.error('rcsProcessor error:', error);
+        callback(error);
     }
-    catch (error) {
-        console.error(error);
-        callback(error)
-    }
-}
+};
+
+export default { handler };

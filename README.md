@@ -1,18 +1,22 @@
-# Chat Orchestrator for Generative AI Conversations
+# SmallBiz AI Support Hub — Multi-Channel Customer Support & Operator Agent
 
->**BE AWARE:** This code base is an [Open Source](LICENSE) starter project designed to provide a demonstration and a base to start from for specific use cases. 
-It should not be considered fully Production-ready. If you plan to deploy and use this in a Production environment, please review the [Using this in Production](#using-this-in-production) section at the end for some additional guidance.
+> **Product:** SmallBiz AI Support Hub  
+> **Transforming:** AWS Sample Chat Orchestrator (`v3.1.0`) into an original, reliable, competition-ready AI support product for small businesses.
 
-## Use-case scenario
+SmallBiz AI Support Hub delivers a zero-hallucination customer support and automated follow-up agent for small businesses. It connects customers across **WhatsApp**, **SMS**, and **Email** to:
+1. **Bedrock Knowledge Base** — Grounded AI answers from business FAQs, shipping guidelines, and return policies.
+2. **Real Order Lookup Tools** — DynamoDB-backed order queries via Bedrock AgentCore Runtime (status, ETAs, tracking).
+3. **Automated Human Escalation** — Escalates sensitive queries (complaints, refunds, damages) and low-confidence turns to operators with SES email alerts.
+4. **Safety & Compliance** — Token-bucket rate limiting (10 msg/10 min window), STOP/UNSUBSCRIBE compliance, and permanent audit logging.
+5. **Operator Dashboard** — A real-time web interface for triaging tickets, viewing message threads, replying to customers, and resolving issues.
 
-Demonstrates how you can create a communications hub to orchestrate chats between communications channels (AWS End User Messaging 2-way SMS, RCS, and WhatsApp) and Amazon Bedrock Agents or Knowledge Bases. End users can chat with an Amazon Bedrock Agent to automate multistep tasks that seamlessly integrate with company systems, APIs and data sources. They can engage in dynamic, personalized chats with Amazon Bedrock Knowledge Bases built off documents stored in S3, or crawled from a public facing website.
+### 📚 Product Documentation
+- [**Configuration Guide**](docs/CONFIGURATION_GUIDE.md) — Comprehensive SSM parameter references, channel setup, and Bedrock KB guides.
+- [**Deployment Guide**](docs/DEPLOYMENT_GUIDE.md) — Step-by-step CLI commands for bootstrapping, building, and deploying CDK stacks.
+- [**API Reference**](docs/API_REFERENCE.md) — REST API endpoints for tickets, stats, replies, and channel webhooks.
+- [**Operator Dashboard**](dashboard/index.html) — Standalone single-page operator console.
 
-<table>
-  <tr>
-    <td align="center"><img src="demo.gif" alt="WhatsApp demo" width="320"/><br/><sub><b>WhatsApp</b></sub></td>
-    <td align="center"><img src="demo-rcs.gif" alt="RCS demo" width="320"/><br/><sub><b>RCS</b></sub></td>
-  </tr>
-</table>
+---
 
 ## Table of Contents
 

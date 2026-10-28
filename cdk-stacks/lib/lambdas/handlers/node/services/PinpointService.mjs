@@ -5,14 +5,15 @@ import { PinpointSMSVoiceV2Client, SendTextMessageCommand, SendMediaMessageComma
 const pinpoint = new PinpointSMSVoiceV2Client({ region: process.env.AWS_REGION });
 
 export async function sendSMS (destinationAddress, message, sessionId=undefined) {
-  let configurationSet = process.env.CONFIGURATION_SET
+  // PATCH: CDK injects DEFAULT_CONFIGURATION_SET; was previously CONFIGURATION_SET (mismatch)
+  let configurationSet = process.env.DEFAULT_CONFIGURATION_SET
   const pinpointInput = { 
     DestinationPhoneNumber: destinationAddress, 
     OriginationIdentity: process.env.ORIGINATION_NUMBER_ID,
     MessageBody: message, 
     DryRun: false,
   };
-  if(process.env.CONFIGURATION_SET) pinpointInput.ConfigurationSetName = process.env.CONFIGURATION_SET
+  if(process.env.DEFAULT_CONFIGURATION_SET) pinpointInput.ConfigurationSetName = process.env.DEFAULT_CONFIGURATION_SET
   if(sessionId) {
     pinpointInput.Context = {
       sessionId: sessionId
@@ -63,7 +64,8 @@ export async function sendMMS (destinationAddress, s3URI, message) {
     MessageBody: message, 
     DryRun: false,
   };
-  if(process.env.CONFIGURATION_SET) pinpointInput.ConfigurationSetName = process.env.CONFIGURATION_SET
+  // PATCH: env var aligned to DEFAULT_CONFIGURATION_SET (matches CDK injection)
+  if(process.env.DEFAULT_CONFIGURATION_SET) pinpointInput.ConfigurationSetName = process.env.DEFAULT_CONFIGURATION_SET
   //Add Optional Items
   if(s3URI) pinpointInput.MediaUrls = [s3URI]
 
